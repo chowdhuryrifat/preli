@@ -78,8 +78,21 @@ def _wrong_transfer_reply(ctx: Dict[str, Any]) -> str:
     cparty = ctx.get("counterparty", "")
     verdict = ctx.get("evidence_verdict", "")
     sev = ctx.get("severity", "low")
+    reason_codes = ctx.get("reason_codes", [])
     has_match = bool(txn_id)
     has_amount = bool(amt)
+    is_ambiguous = "ambiguous_match" in reason_codes
+
+    if is_ambiguous:
+        if lang == "bn":
+            return "আমরা আপনার বর্ণনার সাথে মিলে একাধিক লেনদেন পেয়েছি। অনুগ্রহ করে সঠিক লেনদেন আইডি বা আপনার ভাইয়ের নাম্বারটি জানান। অনুগ্রহ করে আপনার পিন বা ওটিপি কারো সাথে শেয়ার করবেন না।"
+        if lang == "mixed":
+            return "Amra apnar description er sathe match kore ekadhik transaction peyechi. Please correct transaction ID or receiver number ta janan. Please do not share your PIN or OTP with anyone."
+        return (
+            "We found multiple possible transactions matching your description. "
+            "Please confirm the exact transaction ID or the recipient's number so we can assist. "
+            "Please do not share your PIN or OTP with anyone."
+        )
 
     if lang == "bn":
         if has_match and sev == "critical":
@@ -408,6 +421,14 @@ def _wrong_transfer_agent_summary(ctx: Dict[str, Any]) -> str:
     amt = ctx.get("amount", "")
     cparty = ctx.get("counterparty", "")
     verdict = ctx.get("evidence_verdict", "")
+    reason_codes = ctx.get("reason_codes", [])
+    is_ambiguous = "ambiguous_match" in reason_codes
+
+    if is_ambiguous:
+        return (
+            f"Customer reports sending {amt or 'an'} amount to the wrong recipient. "
+            "Multiple candidate transactions found - could not confidently identify which one."
+        )
     if verdict == "insufficient_data":
         return (
             f"Customer reports sending {amt or 'an'} amount to the wrong recipient. "
@@ -422,10 +443,17 @@ def _wrong_transfer_agent_summary(ctx: Dict[str, Any]) -> str:
 def _wrong_transfer_action(ctx: Dict[str, Any]) -> str:
     txn_id = ctx.get("transaction_id", "")
     verdict = ctx.get("evidence_verdict", "")
+    reason_codes = ctx.get("reason_codes", [])
+    is_ambiguous = "ambiguous_match" in reason_codes
+
+    if is_ambiguous:
+        return (
+            "Ask the customer which of the multiple matched transactions is theirs "
+            "before initiating the dispute workflow."
+        )
     if verdict == "insufficient_data":
         return (
-            "Request the exact transaction ID and amount from the customer. "
-            "Ask them to verify the recipient's number."
+            "Request the recipient number or transaction ID from the customer."
         )
     if verdict == "inconsistent":
         return (

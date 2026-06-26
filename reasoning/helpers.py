@@ -728,7 +728,7 @@ def compute_confidence(
         return 0.60
 
     if matched_txn is None and len(candidates) > 1:
-        return 0.65
+        return 0.70
 
     if matched_txn is None:
         return 0.65
@@ -818,7 +818,8 @@ def build_reason_codes(
         return codes
 
     if matched_txn is None and len(candidates) > 1:
-        codes.extend(["ambiguous_match", "needs_clarification"])
+        codes.extend(["ambiguous_match", "multiple_candidates", "needs_clarification"])
+        codes.append("wrong_transfer_context" if case_type == "wrong_transfer" else f"{case_type}_context")
         return codes
 
     if matched_txn is None:

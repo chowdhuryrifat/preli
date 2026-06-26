@@ -337,8 +337,8 @@ def test_ambiguous_multi_candidate() -> None:
     assert result.severity == "medium"
     assert result.department == "dispute_resolution"
     assert result.human_review_required is False
-    assert result.confidence == 0.65
-    assert result.reason_codes == ["ambiguous_match", "needs_clarification"]
+    assert result.confidence == 0.7
+    assert result.reason_codes == ["ambiguous_match", "multiple_candidates", "needs_clarification", "wrong_transfer_context"]
 
 
 # ──────────────────────────────────────────────────────────────────────
