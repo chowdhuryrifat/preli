@@ -5,7 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY contract.py reasoning_engine.py text_engine.py main.py ./
+COPY contract.py main.py ./
+COPY app/ ./app/
+COPY reasoning/ ./reasoning/
 
 ENV PORT=8000
 

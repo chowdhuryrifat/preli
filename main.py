@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from contract import TicketInput, FinalResponse
 from reasoning.reasoning_engine import analyze
-from text_engine import generate
+from app.services.text_engine import generate
 
 app = FastAPI(
     title="QueueStorm Investigator",

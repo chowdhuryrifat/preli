@@ -24,12 +24,12 @@ REQUIRED_FIELDS = [
 
 def test_health():
     resp = requests.get(f"{BASE_URL}/health", timeout=5)
-    assert resp.status_code == 200, f"health: expected 200, got {resp.status_code}"
-    assert resp.json() == {"status": "ok"}, f"health: unexpected body: {resp.text}"
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
     print("  PASS  /health")
 
 
-def test_analyze_ticket(case):
+def test_analyze_ticket(case, expected=None):
     case_id = case.get("id", "?")
     label = case.get("label", "")
     inp = case["input"]
@@ -60,29 +60,50 @@ def test_analyze_ticket(case):
             fail.append(f"invalid {field}: {val!r}")
 
     if fail:
-        print(f"  FAIL  {case_id} ({label}): {', '.join(fail)} ({elapsed:.2f}s)")
+        print(f"\n{'='*60}")
+        print(f"  FAIL  {case_id} ({label}) ({elapsed:.2f}s)")
+        print(f"  Errors: {', '.join(fail)}")
+        print(f"{'─'*60}")
+        print(f"  REQUEST SENT:")
+        print(json.dumps(inp, indent=4))
+        print(f"{'─'*60}")
+        print(f"  RESPONSE RECEIVED:")
+        print(json.dumps(data, indent=4))
+        if expected:
+            print(f"{'─'*60}")
+            print(f"  EXPECTED:")
+            print(json.dumps(expected, indent=4))
+        print(f"{'='*60}\n")
+        return False
     else:
         print(f"  PASS  {case_id} ({label}) ({elapsed:.2f}s)")
+        return True
 
 
 def main():
     print(f"Testing against {BASE_URL}\n")
 
-    try:
-        test_health()
-    except Exception as e:
-        print(f"  FAIL  /health: {e}")
-        sys.exit(1)
-
+    test_health()
     print()
 
     with open("docs/SUST_Preli_Sample_Cases.json", encoding="utf-8") as f:
-        cases = json.load(f)["cases"]
+        raw = json.load(f)
+        cases = raw["cases"]
+
+    passed = 0
+    failed = 0
 
     for case in cases:
-        test_analyze_ticket(case)
+        expected = case.get("expected_output")
+        ok = test_analyze_ticket(case, expected)
+        if ok:
+            passed += 1
+        else:
+            failed += 1
 
-    print("\nDone.")
+    print(f"\n{'='*40}")
+    print(f"  TOTAL: {passed + failed}  |  PASS: {passed}  |  FAIL: {failed}")
+    print(f"{'='*40}")
 
 
 if __name__ == "__main__":
