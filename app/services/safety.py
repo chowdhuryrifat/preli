@@ -70,6 +70,56 @@ _DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
         r"(?:contact|call|reach)\s+(?:\w+\s+){0,5}[\d\s\(\),\.\-]{7,}",
         "use official support channels for assistance"
     ),
+    # ── Spec §10 expanding to Bangla variants ──────────────────────────
+    # S1: Credential — Bangla card number / CVV / PIN variants
+    (
+        r"(?:আপনার\s+)?(?:কার্ডের\s+)?(?:১৬\s*ডিজিটের?\s*)?"
+        r"(?:কার্ড\s*নাম্বার|কার্ড\s*নম্বর|ক্রেডিট\s*কার্ড)"
+        r"(?:\s+(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান))?"
+        r"|"
+        r"(?:CVV|সিভিভি|cvv)\s+(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান)",
+        "অনুগ্রহ করে আপনার পিন, ওটিপি বা পাসওয়ার্ড কারো সাথে শেয়ার করবেন না"
+    ),
+    # S1: 16-digit card number pattern (consecutive or grouped digits)
+    (
+        r"(?:card\s+(?:number|no|#)\s*[:\-]?\s*)?"
+        r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b"
+        r"|"
+        r"\b\d{16}\b"
+        r"|"
+        r"(?:কার্ডের?\s*)?(?:নাম্বার|নম্বর)\s*[:\-]?\s*\d{16}",
+        "please do not share your card details with anyone"
+    ),
+    # S2: Refund promise — Bangla
+    (
+        r"(?:আমরা\s+)?(?:আপনাকে\s+)?(?:টাকা\s+)?ফেরত\s+(?:দেব|দিব|দেওয়া\s+হবে|পাবেন)"
+        r"|"
+        r"(?:আপনার\s+)?(?:রিফান্ড|রিফ্যান্ড)\s+(?:প্রক্রিয়াধীন|প্রক্রিয়া\s+হচ্ছে|হয়ে\s+গেছে)"
+        r"|"
+        r"(?:টাকা\s+)?ফেরত\s+(?:পাবেন|পাবে|পাওয়া\s+যাবে)",
+        "যে কোনও যোগ্য পরিমাণ অফিসিয়াল চ্যানেলের মাধ্যমে ফেরত দেওয়া হবে"
+    ),
+    # S3: Third-party contact — Bangla
+    (
+        r"(?:কল\s+করুন|যোগাযোগ\s+করুন|ফোন\s+করুন)\s+"
+        r"(?:এই\s+)?(?:নম্বরে|নাম্বারে|ফোনে)[:\s]*[\d\s\(\),\.\-]{7,}"
+        r"|"
+        r"(?:আমাদের\s+)?(?:সাপোর্ট|হেল্প|সাহায্য)\s+(?:টিম|দল)\s*[:\s]*[\d\s\(\),\.\-]{7,}",
+        "সাহায্যের জন্য অফিসিয়াল সাপোর্ট চ্যানেল ব্যবহার করুন"
+    ),
+    # S2: Additional English refund promise — "you will receive a refund"
+    (
+        r"(?:you\s+will\s+receive|you'll\s+get|we\s+will\s+issue)\s+(?:a\s+)?"
+        r"(?:full\s+)?refund",
+        "any eligible amount will be returned through official channels"
+    ),
+    # S3: "reach out to our agent at" variant
+    (
+        r"(?:reach\s+out\s+to|get\s+in\s+touch\s+with)\s+(?:our\s+)?"
+        r"(?:agent|representative|team)"
+        r"(?:\s+(?:at|on|via)\s+[\d\s\(\),\.\-]{7,})?",
+        "use official support channels for assistance"
+    ),
 ]
 
 

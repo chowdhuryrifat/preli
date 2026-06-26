@@ -33,7 +33,10 @@ def _detect_duplicate(
     complaint: str,
     amounts: list[float],
 ) -> tuple[str | None, Any | None, list]:
-    """Check if this is a duplicate-payment case and return the duplicate transaction.
+    """Check if this is a duplicate-payment case per spec §4.5.
+
+    Two transactions to the same counterparty for the same amount (within ±0.01 BDT),
+    both of the same type, occurring within 120 seconds of each other.
 
     Returns (relevant_id, matched_txn, candidates).
     """
@@ -48,13 +51,24 @@ def _detect_duplicate(
     if len(transactions) < 2:
         return None, None, []
 
-    # Find pairs of identical-amount, same-counterparty transactions
+    from datetime import datetime, timezone
+    # Find pairs of identical-amount, same-counterparty within 120 seconds
     for i in range(len(transactions) - 1, -1, -1):
         for j in range(i - 1, -1, -1):
-            if (abs(transactions[i].amount - transactions[j].amount) < 0.01
+            if not (abs(transactions[i].amount - transactions[j].amount) < 0.01
                     and transactions[i].type == transactions[j].type
                     and transactions[i].counterparty == transactions[j].counterparty):
-                # The later one is the duplicate
+                continue
+            # Spec §4.5: within 120 seconds of each other
+            try:
+                t1 = datetime.fromisoformat(transactions[i].timestamp)
+                t2 = datetime.fromisoformat(transactions[j].timestamp)
+                if abs((t1 - t2).total_seconds()) <= 120:
+                    matched = transactions[i]  # later one is the duplicate
+                    candidates = [(matched, 100, {"duplicate_match": 100})]
+                    return matched.transaction_id, matched, candidates
+            except (ValueError, TypeError):
+                # If timestamp is unparseable, still match by amount+type+counterparty
                 matched = transactions[i]
                 candidates = [(matched, 100, {"duplicate_match": 100})]
                 return matched.transaction_id, matched, candidates
@@ -90,8 +104,8 @@ def analyze(ticket: TicketInput) -> ReasoningResult:
     if dup_id is not None:
         case_type = "duplicate_payment"
         evidence_verdict = "consistent"
-        severity = classify_severity(case_type, dup_txn.amount)
-        department = map_department(case_type)
+        severity = classify_severity(case_type, dup_txn.amount, evidence_verdict)
+        department = map_department(case_type, complaint)
         human_review = True
         confidence = 0.93
         reason_codes = ["duplicate_payment", "biller_verification_required"]
@@ -130,12 +144,12 @@ def analyze(ticket: TicketInput) -> ReasoningResult:
     # 6. Determine evidence_verdict
     evidence_verdict = judge_evidence(complaint, matched_txn, candidates, transactions)
 
-    # 7. Classify severity
+    # 7. Classify severity (with evidence adjustment per spec §8)
     matched_amount = matched_txn.amount if matched_txn else (amounts[0] if amounts else None)
-    severity = classify_severity(case_type, matched_amount)
+    severity = classify_severity(case_type, matched_amount, evidence_verdict)
 
-    # 8. Map department
-    department = map_department(case_type)
+    # 8. Map department (spec §7.1 refund sub-routing)
+    department = map_department(case_type, complaint)
 
     # 9. Determine human review
     human_review = compute_human_review(
@@ -156,13 +170,14 @@ def analyze(ticket: TicketInput) -> ReasoningResult:
         amounts=amounts,
     )
 
-    # 11. Build reason codes
+    # 11. Build reason codes (with injection detection per spec §11)
     reason_codes = build_reason_codes(
         evidence_verdict=evidence_verdict,
         case_type=case_type,
         matched_txn=matched_txn,
         candidates=candidates,
         matched_keywords=matched_keywords,
+        complaint=complaint,
     )
 
     return ReasoningResult(

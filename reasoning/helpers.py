@@ -530,10 +530,17 @@ def pick_relevant_txn(
 
 
 def _has_established_pattern(matched_txn: Any, transactions: list[Any]) -> bool:
-    """Check if there are 3+ transfers to the same counterparty."""
+    """Check if there are 2+ prior completed transfers to the same counterparty.
+    
+    Per spec §5.3 Pattern 1: The counterparty in the matched transaction 
+    appears in 2 or more prior completed transfer transactions.
+    """
     counterparty = matched_txn.counterparty
-    count = sum(1 for t in transactions if t.counterparty == counterparty and t.type == "transfer")
-    return count >= 3
+    count = sum(1 for t in transactions
+                if t.counterparty == counterparty
+                and t.type == "transfer"
+                and t.status == "completed")
+    return count >= 2
 
 
 def judge_evidence(
@@ -592,44 +599,86 @@ def judge_evidence(
     return "insufficient_data"
 
 
-def classify_severity(case_type: str, amount: float | None) -> str:
+def classify_severity(
+    case_type: str,
+    amount: float | None,
+    evidence_verdict: str | None = None,
+) -> str:
     """Determine severity level.
 
-    Severity depends on case_type first, then amount thresholds.
+    Per spec §8 — Severity Assignment Matrix:
+    1. Base severity by case_type
+    2. Evidence-based adjustment (inconsistent → reduce one level)
+    3. Amount-based modifier (bump up/down)
     """
-    severity_by_type = {
+
+    # ── Step 1: Base severity by case_type ────────────────────────────
+    base_map: dict[str, str] = {
         "phishing_or_social_engineering": "critical",
+        "wrong_transfer": "high",
         "payment_failed": "high",
         "duplicate_payment": "high",
         "agent_cash_in_issue": "high",
-        "refund_request": "low",
         "merchant_settlement_delay": "medium",
+        "refund_request": "low",
+        "other": "low",
     }
 
-    if case_type in severity_by_type:
-        return severity_by_type[case_type]
+    level_map = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    rev_map = ["low", "medium", "high", "critical"]
 
-    if case_type == "wrong_transfer":
-        if amount is None:
-            return "low"
-        if amount < 1000:
-            return "low"
-        if amount < 5000:
-            return "medium"
-        if amount < 100000:
-            return "high"
-        return "critical"
+    base = base_map.get(case_type, "low")
+    level = level_map[base]
 
-    if amount is not None and amount > 100000:
-        return "critical"
-    if amount is not None and amount > 20000:
-        return "high"
+    # ── Step 2: Evidence-based adjustment ────────────────────────────
+    # Inconsistent / insufficient_data → reduce one level (spec §8.3)
+    if evidence_verdict in ("inconsistent", "insufficient_data"):
+        if case_type == "merchant_settlement_delay":
+            pass  # settlement delays don't reduce — money is just slow
+        elif case_type == "phishing_or_social_engineering":
+            pass  # always critical
+        elif evidence_verdict == "insufficient_data" and case_type in ("payment_failed", "duplicate_payment"):
+            pass  # failed payments/duplicates still need attention
+        else:
+            level = max(0, level - 1)
 
-    return "low"
+    # ── Step 3: Amount-based modifier (spec §8.2) ────────────────────
+    if amount is not None and case_type != "phishing_or_social_engineering":
+        if amount >= 100000:
+            # Bump up one level, max critical (applies to all types)
+            level = min(3, level + 1)
+        elif amount >= 50000:
+            # Bump up for merchant_settlement_delay (base medium → high)
+            if case_type == "merchant_settlement_delay":
+                level = min(3, level + 1)
+        elif amount < 1000 and case_type == "wrong_transfer":
+            # Small wrong transfers are less urgent
+            level = max(0, level - 1)
+
+    # Override: duplicate_payment is always high regardless of amount (spec §8.1)
+    if case_type == "duplicate_payment":
+        level = max(level, 2)  # at least high
+
+    return rev_map[level]
 
 
-def map_department(case_type: str) -> str:
-    """Map case_type to department using DEPARTMENT_MAP."""
+def map_department(case_type: str, complaint: str | None = None) -> str:
+    """Map case_type to department using DEPARTMENT_MAP.
+
+    Per spec §7.1, refund_request has sub-routing:
+    - Service failure / product issue → dispute_resolution
+    - Change of mind / no reason → customer_support
+    """
+    if case_type == "refund_request" and complaint:
+        norm = normalize_text(complaint)
+        SERVICE_FAILURE_KEYWORDS = (
+            "not working", "defective", "damaged",
+            "broken", "wrong item", "didn't work", "faulty",
+            "service", "quality issue",
+            "সেবা", "পণ্য খারাপ", "নষ্ট", "ত্রুটিপূর্ণ",
+        )
+        if any(kw in norm for kw in SERVICE_FAILURE_KEYWORDS):
+            return "dispute_resolution"
     return DEPARTMENT_MAP.get(case_type, "customer_support")
 
 
@@ -720,15 +769,42 @@ def compute_confidence(
     return max(0.60, min(0.95, round(0.50 + ratio * 0.40, 2)))
 
 
+def detect_injection(complaint: str) -> bool:
+    """Detect prompt injection attempts per spec §11.
+
+    Returns True if injection patterns are found.
+    """
+    norm = normalize_text(complaint)
+    INJECTION_PATTERNS = (
+        "ignore previous instructions",
+        "ignore previous", "ignore all previous",
+        "forget your rules", "forget rules",
+        "you are not", "you're not",
+        "override", "system prompt",
+        "you are now", "act as",
+        "pretend you are", "pretend to be",
+        "approve refund", "approve the refund",
+        "return consistent", "return inconsistent",
+        "say consistent", "say inconsistent",
+        "ignore your", "disregard",
+        "do not follow", "don't follow",
+    )
+    return any(p in norm for p in INJECTION_PATTERNS)
+
+
 def build_reason_codes(
     evidence_verdict: str,
     case_type: str,
     matched_txn: Any | None,
     candidates: list[tuple[Any, int, dict[str, int]]],
     matched_keywords: set[str],
+    complaint: str | None = None,
 ) -> list[str]:
     """Build a list of reason codes describing the decision path."""
     codes: list[str] = []
+
+    if complaint and detect_injection(complaint):
+        codes.append("injection_attempt_detected")
 
     if case_type == "phishing_or_social_engineering":
         codes.extend(["phishing", "credential_protection", "critical_escalation"])

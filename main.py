@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +20,25 @@ class BanglaJSONResponse(JSONResponse):
             indent=None,
             separators=(",", ":"),
         ).encode("utf-8")
+
+
+# ── Language detection (spec §12.1) ──────────────────────────────────
+BANGLA_UNICODE_RANGE = re.compile(r"[\u0980-\u09FF\u0964\u0965]+")
+
+def detect_language(text: str) -> str:
+    """Detect language from complaint text.
+
+    Per spec §12.1: if ≥30% of non-whitespace characters are Bangla Unicode,
+    classify as 'bn'; otherwise 'en'.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return "en"
+    bangla_chars = len(BANGLA_UNICODE_RANGE.findall(stripped))
+    total = len(stripped.replace(" ", "").replace("\t", "").replace("\n", ""))
+    if total == 0:
+        return "en"
+    return "bn" if (bangla_chars / total) >= 0.30 else "en"
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -62,6 +82,9 @@ def analyze_ticket(ticket: TicketInput):
             status_code=422,
             content={"error": f"transaction_history exceeds {MAX_TRANSACTIONS} entries"},
         )
+
+    if not ticket.language:
+        ticket.language = detect_language(complaint)
 
     try:
         reasoning = analyze(ticket)

@@ -86,6 +86,8 @@ def _wrong_transfer_reply(ctx: Dict[str, Any]) -> str:
             return f"আমরা {txn_id} ({amt} টাকা) লেনদেনটি জরুরি হিসেবে চিহ্নিত করেছি। আমাদের সিনিয়র দল ২ ঘন্টার মধ্যে আপনার সাথে যোগাযোগ করবে। অনুগ্রহ করে আপনার পিন বা ওটিপি কারো সাথে শেয়ার করবেন না।"
         if has_match and verdict == "consistent":
             return f"আমরা {txn_id} ({amt} টাকা) লেনদেনটি সম্পর্কে অবগত হয়েছি। আমাদের বিবাদ নিষ্পত্তি দল তদন্ত করবে এবং অফিসিয়াল চ্যানেলের মাধ্যমে আপনার সাথে যোগাযোগ করবে। অনুগ্রহ করে আপনার পিন বা ওটিপি কারো সাথে শেয়ার করবেন না।"
+        if has_match and verdict == "inconsistent":
+            return f"আমরা {txn_id} ({amt} টাকা) লেনদেনটি পেয়েছি কিন্তু তথ্য পরস্পরবিরোধী। আমাদের দল অতিরিক্ত যাচাই করবে এবং ফলাফল জানাবে। অনুগ্রহ করে আপনার পিন বা ওটিপি কারো সাথে শেয়ার করবেন না।"
         if has_match:
             return f"আমরা {txn_id} লেনদেনটি পেয়েছি তবে আরও তথ্য প্রয়োজন। দয়া করে নিশ্চিত করুন এটি সঠিক লেনদেন কিনা। অনুগ্রহ করে আপনার পিন বা ওটিপি কারো সাথে শেয়ার করবেন না।"
         if has_amount:
@@ -97,6 +99,8 @@ def _wrong_transfer_reply(ctx: Dict[str, Any]) -> str:
             return f"Transaction {txn_id} ({amt} BDT) critical hishebe mark kora hoyeche. Amader senior team 2 ghonta er moddhe contact korbe. Please do not share your PIN or OTP with anyone."
         if has_match and verdict == "consistent":
             return f"Apnar {txn_id} ({amt} BDT) transaction er regarding amra obogoto hoyeche. Amader dispute team investigate korbe and official channel er maddhome contact korbe. Please do not share your PIN or OTP with anyone."
+        if has_match and verdict == "inconsistent":
+            return f"Amra {txn_id} ({amt} BDT) transaction ta peyechi but information contradictory. Amader team extra verify korbe and result janabe. Please do not share your PIN or OTP with anyone."
         if has_match:
             return f"Amra {txn_id} transaction ta peyechi but aro info lagbe. Please confirm ei transaction ki correct. Please do not share your PIN or OTP with anyone."
         if has_amount:
@@ -113,6 +117,12 @@ def _wrong_transfer_reply(ctx: Dict[str, Any]) -> str:
         return (
             f"We have identified transaction {txn_id} for {amt} BDT sent to {cparty}. "
             f"Our dispute team will investigate and contact you through official channels. "
+            f"Please do not share your PIN or OTP with anyone."
+        )
+    if has_match and verdict == "inconsistent":
+        return (
+            f"We found transaction {txn_id} for {amt} BDT, but the information is contradictory. "
+            f"Our team will conduct additional verification and update you. "
             f"Please do not share your PIN or OTP with anyone."
         )
     if has_match:
@@ -393,16 +403,45 @@ def _other_reply(ctx: Dict[str, Any]) -> str:
     )
 
 
+def _wrong_transfer_agent_summary(ctx: Dict[str, Any]) -> str:
+    txn_id = ctx.get("transaction_id", "")
+    amt = ctx.get("amount", "")
+    cparty = ctx.get("counterparty", "")
+    verdict = ctx.get("evidence_verdict", "")
+    if verdict == "insufficient_data":
+        return (
+            f"Customer reports sending {amt or 'an'} amount to the wrong recipient. "
+            f"No matching transaction could be confidently identified from the history."
+        )
+    return (
+        f"Customer reports sending {amt} BDT via {txn_id} to {cparty}, "
+        f"which they now believe was the wrong recipient. Recipient is unresponsive."
+    )
+
+
+def _wrong_transfer_action(ctx: Dict[str, Any]) -> str:
+    txn_id = ctx.get("transaction_id", "")
+    verdict = ctx.get("evidence_verdict", "")
+    if verdict == "insufficient_data":
+        return (
+            "Request the exact transaction ID and amount from the customer. "
+            "Ask them to verify the recipient's number."
+        )
+    if verdict == "inconsistent":
+        return (
+            f"Investigate {txn_id} — customer claims wrong recipient but history shows "
+            f"established pattern with this counterparty. Verify with customer."
+        )
+    return (
+        f"Verify {txn_id} details with the customer and initiate the "
+        f"wrong-transfer dispute workflow per policy."
+    )
+
+
 _TEMPLATES: Dict[str, TemplateSet] = {
     "wrong_transfer": TemplateSet(
-        agent_summary=_t(
-            "Customer reports sending {amount} BDT via {transaction_id} to {counterparty}, "
-            "which they now believe was the wrong recipient. Recipient is unresponsive."
-        ),
-        recommended_next_action=_t(
-            "Verify {transaction_id} details with the customer and initiate the "
-            "wrong-transfer dispute workflow per policy."
-        ),
+        agent_summary=_wrong_transfer_agent_summary,
+        recommended_next_action=_wrong_transfer_action,
         customer_reply=_wrong_transfer_reply,
     ),
     "payment_failed": TemplateSet(

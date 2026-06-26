@@ -36,6 +36,9 @@ WRONG_TRANSFER_KEYWORDS = {
     "sent to wrong", "transferred to wrong", "typo", "typed wrong",
     "wrong", "vul number", "vul account", "vul recipient",
     "ভুল নাম্বার", "ভুল অ্যাকাউন্ট", "ভুল ব্যক্তি", "ভুল",
+    # Spec §14 additions
+    "vul lôk", "vul manush", "mishti number", "mishti account",
+    "ভুল লোক", "ভুল মানুষ", "ভুল জায়গায়",
 }
 
 PAYMENT_FAILED_KEYWORDS = {
@@ -43,28 +46,44 @@ PAYMENT_FAILED_KEYWORDS = {
     "balance deducted", "money deducted", "amount deducted",
     "failed", "fail", "unsuccessful",
     "পেমেন্ট failed", "টাকা কেটেছে", "কেটেছে", "failed",
+    # Spec §14 additions
+    "পেমেন্ট হয়নি", "পেমেন্ট হয়নি", "টাকা যায়নি", "টাকা যায়নি",
+    "money cut", "payment hoyni",
 }
 
 REFUND_REQUEST_KEYWORDS = {
     "refund", "refund my money", "give me my money back", "money back",
     "change my mind", "changed my mind", "don't want", "cancel",
     "ফেরত", "টাকা ফেরত", "রিফান্ড",
+    # Spec §14 additions
+    "টাকা ফেরত চাই", "ফেরত চাই", "মনি ব্যাক",
+    "service", "not working", "defective",
+    "সেবা খারাপ", "পণ্য খারাপ", "ত্রুটিপূর্ণ",
 }
 
 DUPLICATE_PAYMENT_KEYWORDS = {
     "duplicate", "deducted twice", "paid twice", "charged twice",
     "double payment", "two times", "same bill",
     "ডুপ্লিকেট", "দুইবার", "দুই বার",
+    # Spec §14 additions
+    "একই বিল", "একই বিল দুইবার",
+    "double charge", "double deduction",
 }
 
 MERCHANT_SETTLEMENT_KEYWORDS = {
     "settlement", "not settled", "settlement delay", "sales not settled",
     "merchant settlement", "my sales", "settle",
+    # Spec §14 additions
+    "টাকা পাইনি", "সেলস টাকা পাইনি",
+    "payment pending", "settlement pending",
 }
 
 AGENT_CASH_IN_KEYWORDS = {
     "cash in", "cash-in", "agent cash in", "agent er kache", "agent এর কাছে",
     "agent", "ক্যাশ ইন", "ক্যাশইন", "agent এ cash in",
+    # Spec §14 additions
+    "এজেন্টের কাছে", "এজেন্ট ক্যাশ ইন",
+    "agent theke", "agent kache",
 }
 
 PHISHING_KEYWORDS = {
@@ -73,6 +92,11 @@ PHISHING_KEYWORDS = {
     "account will be blocked", "call from", "called me",
     "ওটিপি", "পিন", "পাসওয়ার্ড", "স্ক্যাম",
     "otp", "pin", "scam", "fake",
+    # Spec §14 additions
+    "জাল কল", "ভুয়া কল", "স্ক্যাম কল",
+    "নিরাপত্তা কোড", "সিকিউরিটি কোড",
+    "block account", "account block",
+    "আমার অ্যাকাউন্ট ব্লক", "অ্যাকাউন্ট বন্ধ",
 }
 
 # ── Time-related patterns (English / Bangla / Banglish) ──────────────

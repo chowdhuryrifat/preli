@@ -418,7 +418,7 @@ def test_banglish_complaint() -> None:
     assert result.relevant_transaction_id == "TXN-BL1"
     assert result.evidence_verdict == "consistent"
     assert result.case_type == "wrong_transfer"
-    assert result.severity == "medium"
+    assert result.severity == "high"
     assert result.department == "dispute_resolution"
     assert result.human_review_required is True
 
@@ -509,7 +509,7 @@ def test_low_value_transfer() -> None:
     )
     result = analyze(ticket)
     assert result.relevant_transaction_id == "TXN-LOW"
-    assert result.severity == "low"
+    assert result.severity == "medium"
     assert result.human_review_required is True  # wrong_transfer always needs review
 
 
