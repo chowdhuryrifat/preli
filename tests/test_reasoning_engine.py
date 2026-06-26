@@ -454,13 +454,13 @@ def test_prompt_injection() -> None:
 # 17. High-value transfer
 # ──────────────────────────────────────────────────────────────────────
 def test_high_value_transfer() -> None:
-    """Transfer >100k → critical severity"""
+    """Transfer at cap boundary (100k) → critical severity"""
     txns = [
-        _make_txn("TXN-HIGH", "2026-04-14T12:00:00Z", "transfer", 150000, "+8801700000001", "completed"),
+        _make_txn("TXN-HIGH", "2026-04-14T12:00:00Z", "transfer", 100000, "+8801700000001", "completed"),
     ]
     ticket = TicketInput(
         ticket_id="TKT-HIGH",
-        complaint="I sent 150000 taka to a wrong account! Please stop it!",
+        complaint="I sent 100000 taka to a wrong account! Please stop it!",
         language="en",
         channel="in_app_chat",
         user_type="customer",
@@ -471,6 +471,24 @@ def test_high_value_transfer() -> None:
     assert result.severity == "critical"
     assert result.department == "dispute_resolution"
     assert result.human_review_required is True
+
+
+def test_over_cap_rejected() -> None:
+    """Transfer >100k → amount rejected, insufficient_data"""
+    txns = [
+        _make_txn("TXN-OVER", "2026-04-14T12:00:00Z", "transfer", 150000, "+8801700000001", "completed"),
+    ]
+    ticket = TicketInput(
+        ticket_id="TKT-OVER",
+        complaint="I sent 150000 taka to a wrong account! Please stop it!",
+        language="en",
+        channel="in_app_chat",
+        user_type="customer",
+        transaction_history=txns,
+    )
+    result = analyze(ticket)
+    assert result.relevant_transaction_id is None
+    assert result.evidence_verdict == "insufficient_data"
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -51,12 +51,28 @@ def extract_amounts(text: str) -> list[float]:
 
     Supports patterns like:
         5000 taka, ৫০০০ টাকা, 15000tk, 1,200 taka
+
+    Only extracts if the text contains monetary context words.
+    Skips zero/negative amounts and caps at 100,000 BDT.
     """
+    context_words = ["taka", "tk", "টাকা", "bdt", "sent", "send", "pay", "paid",
+                     "payment", "money", "deducted", "transfer", "amount",
+                     "refund", "cash", "bill", "cost", "price", "charge",
+                     "পাঠিয়েছে", "টাকা", "ক্যাশ", "বিল", "দাম"]
+    if not any(kw in text.lower() for kw in context_words):
+        return []
+
     amounts: list[float] = []
     for match in re.finditer(AMOUNT_RE, text, re.IGNORECASE):
-        raw = match.group(1).replace(",", "")
+        raw = match.group(1) or match.group(2)
+        if raw is None:
+            continue
+        raw = raw.replace(",", "")
         try:
-            amounts.append(float(raw))
+            amt = float(raw)
+            if amt <= 0 or amt > 100_000:
+                continue
+            amounts.append(amt)
         except ValueError:
             continue
     return amounts
@@ -216,15 +232,33 @@ def extract_keywords(text: str) -> set[str]:
 
 
 def _has_phishing_context(norm: str) -> bool:
-    """Check for strong phishing indicators."""
-    phish_phrases = ["otp", "pin", "password", "scam", "fake call",
-                     "verification code", "block my account",
-                     "called me", "ask for my", "asked for my",
-                     "ওটিপি", "পিন", "পাসওয়ার্ড", "স্ক্যাম"]
-    for p in phish_phrases:
+    """Check for strong phishing indicators.
+    
+    Two-pass approach:
+    1. Solicitation/suspicious patterns alone are always phishing.
+    2. Credential keywords only trigger if suspicious context is also present.
+    """
+    solicitation_phrases = [
+        "called me", "call from", "ask for my", "asked for my",
+        "scam", "scammer", "fake call", "fake phone",
+        "suspicious call", "suspicious message",
+        "block my account", "account will be blocked",
+        "claiming to be", "claim to be", "said they are from",
+        "ওটিপি", "পিন", "পাসওয়ার্ড", "স্ক্যাম",
+    ]
+    for p in solicitation_phrases:
         if p in norm:
             return True
-    return False
+
+    credential_kw = ["otp", "pin", "password", "verification code"]
+    if not any(kw in norm for kw in credential_kw):
+        return False
+
+    context_triggers = ["call", "called", "asked", "asking", "says", "said",
+                        "claim", "claims", "sms", "message", "text",
+                        "block", "scam", "fake", "unsolicited",
+                        "কল", "ফোন", "স্ক্যাম"]
+    return any(ctx in norm for ctx in context_triggers)
 
 
 def _has_wrong_transfer_context(norm: str) -> bool:
@@ -286,7 +320,8 @@ def _has_agent_cash_in_context(norm: str) -> bool:
 
 def _has_merchant_settlement_context(norm: str) -> bool:
     """Check for merchant settlement indicators."""
-    words = ["settlement", "settle", "settled", "sales", "merchant"]
+    words = ["settlement", "settle", "settled", "sales", "merchant",
+             "সেটেলমেন্ট", "মার্চেন্ট", "বিক্রয়"]
     count = sum(1 for w in words if w in norm)
     return count >= 2
 
@@ -371,9 +406,11 @@ def score_transaction(
     score = 0
     breakdown: dict[str, int] = {}
 
-    # Amount match (+40) — guard against None amounts (upstream may have
-    # NULL for fee/reversal rows). Skip amount scoring entirely when
-    # the transaction has no amount recorded.
+    # Skip zero/negative/over-cap transactions; guard against None amounts
+    if txn.amount is not None and (txn.amount <= 0 or txn.amount > 100_000):
+        return (0, {})
+
+    # Amount match (+40)
     if txn.amount is not None:
         for amt in amounts:
             if abs(txn.amount - amt) < 0.01:
@@ -548,7 +585,11 @@ def judge_evidence(
     if matched_txn.status in ("failed", "pending", "reversed"):
         return "consistent"
 
-    return "consistent"
+    # Amount match is strong evidence of consistency
+    if candidates and "amount_match" in candidates[0][2]:
+        return "consistent"
+
+    return "insufficient_data"
 
 
 def classify_severity(case_type: str, amount: float | None) -> str:

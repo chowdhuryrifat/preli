@@ -785,7 +785,7 @@ class TestInternalBuildContext:
         ticket = make_ticket(transactions=[tx])
         reasoning = make_reasoning(case_type="wrong_transfer", transaction_id="TXN-CTX-1")
         ctx = _build_context(ticket, reasoning)
-        assert ctx["amount"] == 5000
+        assert ctx["amount"] == "5000"
         assert ctx["counterparty"] == "+8801700000000"
         assert ctx["status"] == "completed"
 
