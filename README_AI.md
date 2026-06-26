@@ -44,7 +44,7 @@ The AI Text Generation module is the final stage of the QueueStorm investigation
 | Account unblock promises ("we will unblock") | "your account will be reviewed by our team" |
 | Third-party contact instructions with phone numbers | "use official support channels for assistance" |
 
-The filter has a secondary safety check: if the matched text is already preceded by a safe prefix (e.g., "please do not", "we never", "never share"), it is left unchanged.
+The filter has a secondary safety check: if the matched text is already preceded by a safe prefix (e.g., "please do not", "we never", "under no circumstances"), it is left unchanged.
 
 ## Supported languages
 

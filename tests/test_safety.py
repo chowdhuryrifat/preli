@@ -2,10 +2,6 @@ import pytest
 from app.services.safety import safety_check, _is_already_safe, _DANGEROUS_PATTERNS
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 SAFETY_PHRASES = [
     "do not share",
     "any eligible amount",
@@ -25,10 +21,6 @@ def _assert_unchanged(result: str, original: str) -> None:
         f"Expected unchanged but got:\n  original: {original!r}\n  result:   {result!r}"
     )
 
-
-# ---------------------------------------------------------------------------
-# Credential request detection  (all verb + credential combinations)
-# ---------------------------------------------------------------------------
 
 class TestCredentialRequests:
     @pytest.mark.parametrize("verb", [
@@ -85,10 +77,6 @@ class TestCredentialRequests:
         _assert_safe(result)
 
 
-# ---------------------------------------------------------------------------
-# Refund promise detection
-# ---------------------------------------------------------------------------
-
 class TestRefundPromises:
     def test_we_will_refund(self) -> None:
         result = safety_check("We will refund your money within 24 hours.")
@@ -121,10 +109,6 @@ class TestRefundPromises:
         assert "eligible amount" in result.lower()
 
 
-# ---------------------------------------------------------------------------
-# Reversal promise detection
-# ---------------------------------------------------------------------------
-
 class TestReversalPromises:
     def test_we_will_reverse(self) -> None:
         result = safety_check("We will reverse the transaction now.")
@@ -144,10 +128,6 @@ class TestReversalPromises:
         _assert_unchanged(result, text)
 
 
-# ---------------------------------------------------------------------------
-# Unblock promise detection
-# ---------------------------------------------------------------------------
-
 class TestUnblockPromises:
     def test_we_will_unblock(self) -> None:
         result = safety_check("We will unblock your account shortly.")
@@ -161,10 +141,6 @@ class TestUnblockPromises:
         result = safety_check("Your account has been unblocked.")
         assert "reviewed" in result.lower()
 
-
-# ---------------------------------------------------------------------------
-# Third-party contact detection
-# ---------------------------------------------------------------------------
 
 class TestThirdPartyContact:
     def test_phone_number_after_contact(self) -> None:
@@ -211,10 +187,6 @@ class TestThirdPartyContact:
         _assert_unchanged(result, text)
 
 
-# ---------------------------------------------------------------------------
-# Safe text must not be mutated
-# ---------------------------------------------------------------------------
-
 class TestSafeTextPreserved:
     @pytest.mark.parametrize("text", [
         "Please do not share your PIN or OTP with anyone.",
@@ -239,10 +211,6 @@ class TestSafeTextPreserved:
         _assert_unchanged(safety_check(text), text)
 
 
-# ---------------------------------------------------------------------------
-# Multiple unsafe patterns
-# ---------------------------------------------------------------------------
-
 class TestMultipleUnsafePatterns:
     def test_pin_and_refund_together(self) -> None:
         text = "Enter your PIN and we will refund you."
@@ -260,10 +228,6 @@ class TestMultipleUnsafePatterns:
         result = safety_check(text)
         _assert_safe(result)
 
-
-# ---------------------------------------------------------------------------
-# Prompt injection scenarios
-# ---------------------------------------------------------------------------
 
 class TestPromptInjection:
     def test_injection_with_credential_request(self) -> None:
@@ -296,10 +260,6 @@ class TestPromptInjection:
         result = safety_check(text)
         _assert_unchanged(result, text)
 
-
-# ---------------------------------------------------------------------------
-# Language / script edge cases
-# ---------------------------------------------------------------------------
 
 class TestEdgeCases:
     def test_empty_string(self) -> None:
@@ -341,10 +301,6 @@ class TestEdgeCases:
         assert isinstance(result, str) and len(result) > 0
 
 
-# ---------------------------------------------------------------------------
-# _is_already_safe  (direct unit test of internal helper)
-# ---------------------------------------------------------------------------
-
 class TestIsAlreadySafe:
     def test_do_not_before_match(self) -> None:
         text = "Please do not share your PIN"
@@ -384,10 +340,6 @@ class TestIsAlreadySafe:
         idx = text.index("share your OTP")
         assert _is_already_safe(text, idx) is False
 
-
-# ---------------------------------------------------------------------------
-# Pattern definitions are well-formed
-# ---------------------------------------------------------------------------
 
 class TestPatternIntegrity:
     def test_all_patterns_compile(self) -> None:

@@ -11,10 +11,6 @@ from app.services.text_engine import (
 )
 
 
-# ======================================================================
-# Fixtures & helpers
-# ======================================================================
-
 def make_tx(
     tx_id: str,
     amount: float = 1000,
@@ -72,10 +68,6 @@ def make_reasoning(
     )
 
 
-# ======================================================================
-# Safety invariant — every generated output must be safe
-# ======================================================================
-
 SAFETY_PHRASES = [
     "do not share",
     "any eligible amount",
@@ -115,10 +107,6 @@ def assert_no_credential_request(text: str) -> None:
                 if not any(neg in before for neg in negations):
                     pytest.fail(f"Credential request detected: {phrase!r} in {text!r}")
 
-
-# ======================================================================
-# 1.  wrong_transfer
-# ======================================================================
 
 class TestWrongTransfer:
     def test_english_customer(self) -> None:
@@ -195,10 +183,6 @@ class TestWrongTransfer:
         assert "do not share" in result.customer_reply.lower()
 
 
-# ======================================================================
-# 2.  payment_failed
-# ======================================================================
-
 class TestPaymentFailed:
     def test_english_customer(self) -> None:
         tx = make_tx("TXN-PF-1", amount=1200, tx_type="payment", status="failed")
@@ -241,10 +225,6 @@ class TestPaymentFailed:
         assert "PIN" in result.customer_reply
 
 
-# ======================================================================
-# 3.  refund_request
-# ======================================================================
-
 class TestRefundRequest:
     def test_english_customer(self) -> None:
         tx = make_tx("TXN-RF-1", amount=500, counterparty="MERCHANT-7821", tx_type="payment")
@@ -286,10 +266,6 @@ class TestRefundRequest:
         assert "merchant" in result.customer_reply.lower()
         assert "PIN" in result.customer_reply
 
-
-# ======================================================================
-# 4.  duplicate_payment
-# ======================================================================
 
 class TestDuplicatePayment:
     def test_english_customer(self) -> None:
@@ -340,10 +316,6 @@ class TestDuplicatePayment:
         assert "PIN" in result.customer_reply
 
 
-# ======================================================================
-# 5.  merchant_settlement_delay
-# ======================================================================
-
 class TestMerchantSettlementDelay:
     def test_english_merchant(self) -> None:
         tx = make_tx("TXN-MS-1", amount=15000, counterparty="MERCHANT-SELF", tx_type="settlement", status="pending")
@@ -391,10 +363,6 @@ class TestMerchantSettlementDelay:
         assert "apnar" in result.customer_reply.lower() or "amader" in result.customer_reply.lower()
 
 
-# ======================================================================
-# 6.  agent_cash_in_issue
-# ======================================================================
-
 class TestAgentCashInIssue:
     def test_english_customer(self) -> None:
         tx = make_tx("TXN-AG-1", amount=2000, counterparty="AGENT-318", tx_type="cash_in", status="pending")
@@ -440,10 +408,6 @@ class TestAgentCashInIssue:
         assert "agent" in result.customer_reply.lower()
         assert "PIN" in result.customer_reply
 
-
-# ======================================================================
-# 7.  phishing_or_social_engineering
-# ======================================================================
 
 class TestPhishingSocialEngineering:
     def test_english_customer(self) -> None:
@@ -504,10 +468,6 @@ class TestPhishingSocialEngineering:
         assert "before sharing" in result.customer_reply.lower()
 
 
-# ======================================================================
-# 8.  other / unknown
-# ======================================================================
-
 class TestOtherCaseType:
     def test_vague_complaint_no_transaction(self) -> None:
         ticket = make_ticket(complaint="Something is wrong with my money")
@@ -555,10 +515,6 @@ class TestOtherCaseType:
         assert "share" in result.customer_reply.lower()
 
 
-# ======================================================================
-# Language support
-# ======================================================================
-
 class TestLanguageSupport:
     @pytest.mark.parametrize("language,keyword", [
         ("en", "do not share"),
@@ -605,10 +561,6 @@ class TestLanguageSupport:
         assert result.recommended_next_action.isascii()
 
 
-# ======================================================================
-# Transaction ID handling
-# ======================================================================
-
 class TestTransactionIdHandling:
     def test_transaction_id_included_when_provided(self) -> None:
         tx = make_tx("TXN-TID-1")
@@ -644,10 +596,6 @@ class TestTransactionIdHandling:
         assert "to , which" in result.agent_summary
 
 
-# ======================================================================
-# Severity levels
-# ======================================================================
-
 class TestSeverityLevels:
     @pytest.mark.parametrize("severity", ["low", "medium", "high", "critical"])
     def test_all_severities_produce_output(self, severity: str) -> None:
@@ -664,10 +612,6 @@ class TestSeverityLevels:
         assert result.customer_reply
 
 
-# ======================================================================
-# Evidence verdicts
-# ======================================================================
-
 class TestEvidenceVerdicts:
     @pytest.mark.parametrize("verdict", ["consistent", "inconsistent", "insufficient_data"])
     def test_all_verdicts_produce_output(self, verdict: str) -> None:
@@ -680,10 +624,6 @@ class TestEvidenceVerdicts:
         result = generate(ticket, reasoning)
         assert "do not share" in result.customer_reply.lower()
 
-
-# ======================================================================
-# Channel variations
-# ======================================================================
 
 class TestChannelVariations:
     @pytest.mark.parametrize("channel", [
@@ -702,10 +642,6 @@ class TestChannelVariations:
         assert result.customer_reply
 
 
-# ======================================================================
-# User type variations
-# ======================================================================
-
 class TestUserType:
     @pytest.mark.parametrize("user_type", ["customer", "merchant", "agent", "unknown"])
     def test_all_user_types_produce_output(self, user_type: str) -> None:
@@ -720,10 +656,6 @@ class TestUserType:
         assert result.agent_summary
         assert result.customer_reply
 
-
-# ======================================================================
-# Safety guarantees
-# ======================================================================
 
 class TestSafetyGuarantees:
     def test_unsafe_complaint_does_not_leak(self) -> None:
@@ -794,10 +726,6 @@ class TestSafetyGuarantees:
         assert_all_outputs_safe(result)
 
 
-# ======================================================================
-# Output type & structure
-# ======================================================================
-
 class TestOutputStructure:
     def test_returns_generated_text(self) -> None:
         ticket = make_ticket()
@@ -821,10 +749,6 @@ class TestOutputStructure:
         assert len(result.recommended_next_action) > 0
         assert len(result.customer_reply) > 0
 
-
-# ======================================================================
-# Internal function unit tests
-# ======================================================================
 
 class TestInternalFindTransaction:
     def test_finds_matching_transaction(self) -> None:

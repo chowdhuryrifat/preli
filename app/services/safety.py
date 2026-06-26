@@ -6,12 +6,12 @@ _DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
     (
         r"(?:please\s+)?"
         r"(?:provide|enter|share|give|send|tell|need|require|want)\s+"
-        r"(?:us|me)\s+(?:the\s+)?(?:\w+'s\s+)?(?:your\s+)?"
+        r"(?:us|me)\s+(?:the\s+)?(?:\w+(?:'s)?\s+)?(?:your\s+)?"
         r"(?:PIN|OTP|password|CVV|card\s+number|16[- ]?digit\s+card\s+number)"
         r"|"
         r"(?:please\s+)?"
         r"(?:provide|enter|share|give|send|tell|need|require|want)\s+"
-        r"(?:the\s+)?(?:\w+'s\s+)?(?:your\s+)?"
+        r"(?:the\s+)?(?:\w+(?:'s)?\s+)?(?:your\s+)?"
         r"(?:PIN|OTP|password|CVV|card\s+number|16[- ]?digit\s+card\s+number)",
         "please do not share your PIN, OTP, or password with anyone"
     ),
