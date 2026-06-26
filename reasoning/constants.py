@@ -112,4 +112,5 @@ TIME_PATTERNS_24H = [
 ]
 
 # ── Amount extraction regex ───────────────────────────────────────────
-AMOUNT_RE = r"(\d[\d,]*)\s*(taka|tk|টাকা|bdt)?"
+# Matches "5000" (bare), "5000 taka" (suffix), and "BDT 5000" (prefix)
+AMOUNT_RE = r"(?:(\d[\d,]*)\s*(?:taka|tk|টাকা|bdt)?|(?:bdt|taka|tk|টাকা)\s*(\d[\d,]*))"

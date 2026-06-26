@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastapi import FastAPI, Request
@@ -6,6 +7,12 @@ from fastapi.responses import JSONResponse
 from contract import TicketInput, FinalResponse
 from reasoning.reasoning_engine import analyze
 from app.services.text_engine import generate
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+MAX_COMPLAINT_LENGTH = 5000
+MAX_TRANSACTIONS = 100
 
 app = FastAPI(
     title="QueueStorm Investigator",
@@ -25,16 +32,28 @@ def health():
     summary="Analyze a support ticket",
 )
 def analyze_ticket(ticket: TicketInput):
-    if not ticket.complaint.strip():
+    complaint = ticket.complaint.strip()
+    if not complaint:
         return JSONResponse(
             status_code=422,
             content={"error": "complaint must not be empty"},
+        )
+    if len(complaint) > MAX_COMPLAINT_LENGTH:
+        return JSONResponse(
+            status_code=422,
+            content={"error": f"complaint exceeds {MAX_COMPLAINT_LENGTH} characters"},
+        )
+    if ticket.transaction_history and len(ticket.transaction_history) > MAX_TRANSACTIONS:
+        return JSONResponse(
+            status_code=422,
+            content={"error": f"transaction_history exceeds {MAX_TRANSACTIONS} entries"},
         )
 
     try:
         reasoning = analyze(ticket)
         text = generate(ticket, reasoning)
-    except Exception:
+    except Exception as exc:
+        logger.exception("analyze_ticket failed for ticket_id=%s", ticket.ticket_id)
         return JSONResponse(
             status_code=500,
             content={"error": "internal_error"},

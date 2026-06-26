@@ -41,7 +41,7 @@ _DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
     ),
     (
         r"(?:contact|call|reach\s+out\s+to)\s+"
-        r"(?!us|our|the\s+company|support|customer\s+support|official\s+channels)"
+        r"(?!us|our|you|the\s+company|support|customer\s+support|official\s+channels)"
         r"\s*(?:\w+\s+){0,3}"
         r"(?:support|team|department|help|assistance|service)"
         r"(?:\s+at\s+[\d\s\(\),\.\-]{7,})?",
