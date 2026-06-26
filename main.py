@@ -1,3 +1,4 @@
+import json
 import os
 
 from fastapi import FastAPI, Request
@@ -7,10 +8,23 @@ from contract import TicketInput, FinalResponse
 from reasoning.reasoning_engine import analyze
 from app.services.text_engine import generate
 
+
+class BanglaJSONResponse(JSONResponse):
+    def render(self, content):
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+
 app = FastAPI(
     title="QueueStorm Investigator",
     version="1.0.0",
     description="Ticket analysis API for the QueueStorm hackathon preliminary round.",
+    default_response_class=BanglaJSONResponse,
 )
 
 

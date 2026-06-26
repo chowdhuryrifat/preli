@@ -15,6 +15,25 @@ _DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
         r"(?:PIN|OTP|password|CVV|card\s+number|16[- ]?digit\s+card\s+number)",
         "please do not share your PIN, OTP, or password with anyone"
     ),
+    # Bangla equivalents: দিন / দাও / শেয়ার করুন + পিন / ওটিপি / পাসওয়ার্ড / সিভিভি /
+    # কার্ড নাম্বার — both word orders, plus Latin credentials in mixed-script attacks.
+    (
+        r"(?:দয়া\s+করে\s+)?"
+        r"(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান|চান|চাই)\s+"
+        r"(?:আপনার\s+(?:কার্ডের\s+)?|কার্ডের\s+)?"
+        r"(?:পিন|ওটিপি|পাসওয়ার্ড|সিভিভি|কার্ড\s*নাম্বার|কার্ড\s*নম্বর)"
+        r"|"
+        r"(?:আপনার\s+(?:কার্ডের\s+)?|কার্ডের\s+)?"
+        r"(?:পিন|ওটিপি|পাসওয়ার্ড|সিভিভি|কার্ড\s*নাম্বার|কার্ড\s*নম্বর)"
+        r"\s+(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান|চান|চাই)"
+        r"|"
+        # Possessive split: "আপনার কার্ডের নাম্বার দিন" — কার্ডের splits the compound
+        r"(?:আপনার\s+)?কার্ডের\s+(?:নাম্বার|নম্বর)\s+(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান|চান|চাই)"
+        r"|"
+        # Mixed-script: Latin credential keyword + Bengali verb
+        r"(?:PIN|OTP|password|CVV)\s+(?:দিন|দাও|শেয়ার\s*করুন|বলুন|পাঠান|জানান|চান|চাই)",
+        "অনুগ্রহ করে আপনার পিন, ওটিপি বা পাসওয়ার্ড কারো সাথে শেয়ার করবেন না"
+    ),
     (
         r"we\s+will\s+(?:give\s+you\s+)?(?:a\s+)?refund\b(?!\s+policy)",
         "any eligible amount will be returned through official channels"

@@ -4,8 +4,8 @@ from typing import Optional, List
 class TransactionEntry(BaseModel):
     transaction_id: str
     timestamp: str
-    type: str           # transfer | payment | cash_in | cash_out | settlement |  refund
-    amount: float
+    type: str           # transfer | payment | cash_in | cash_out | settlement | refund
+    amount: Optional[float] = None  # upstream may have NULL for fee/reversal rows
     counterparty: str
     status: str          # completed | failed | pending | reversed
 class TicketInput(BaseModel):

@@ -371,12 +371,15 @@ def score_transaction(
     score = 0
     breakdown: dict[str, int] = {}
 
-    # Amount match (+40)
-    for amt in amounts:
-        if abs(txn.amount - amt) < 0.01:
-            score += AMOUNT_MATCH_WEIGHT
-            breakdown["amount_match"] = AMOUNT_MATCH_WEIGHT
-            break
+    # Amount match (+40) — guard against None amounts (upstream may have
+    # NULL for fee/reversal rows). Skip amount scoring entirely when
+    # the transaction has no amount recorded.
+    if txn.amount is not None:
+        for amt in amounts:
+            if abs(txn.amount - amt) < 0.01:
+                score += AMOUNT_MATCH_WEIGHT
+                breakdown["amount_match"] = AMOUNT_MATCH_WEIGHT
+                break
 
     # Time match (+30) — requires hour hint; date proximity checked via reference_date
     if time_hints.get("hour") is not None:
